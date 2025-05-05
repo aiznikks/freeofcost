@@ -1,0 +1,30 @@
+import tensorflow as tf
+import numpy as np
+
+# Load model to detect input shape
+model = tf.saved_model.load("saved_model_dir")
+concrete_func = model.signatures["serving_default"]
+input_shape = list(concrete_func.structured_input_signature[1].values())[0].shape
+print("Detected input shape:", input_shape)
+
+# Convert to TFLite
+converter = tf.lite.TFLiteConverter.from_saved_model("saved_model_dir")
+converter.optimizations = [tf.lite.Optimize.DEFAULT]
+
+# Representative dataset using detected input shape
+def representative_data_gen():
+    for _ in range(100):
+        dummy_input = np.random.rand(*input_shape).astype(np.float32)
+        yield [dummy_input]
+
+converter.representative_dataset = representative_data_gen
+converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+converter.inference_input_type = tf.uint8
+converter.inference_output_type = tf.uint8
+
+tflite_quant_model = converter.convert()
+
+with open("model_int8.tflite", "wb") as f:
+    f.write(tflite_quant_model)
+
+print("INT8 quantized TFLite model saved as model_int8.tflite")
