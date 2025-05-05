@@ -1,34 +1,46 @@
 import tensorflow as tf
 import numpy as np
 
-# Load model to detect input shape
-model = tf.saved_model.load("saved_model_dir")
+# Path to your SavedModel directory
+saved_model_dir = "saved_model_dir"  # Replace with your actual path
+
+# Step 1: Load the model and get input details
+model = tf.saved_model.load(saved_model_dir)
 concrete_func = model.signatures["serving_default"]
 input_tensor = list(concrete_func.structured_input_signature[1].values())[0]
+
+# Extract shape and fix any None values
 input_shape = input_tensor.shape.as_list()
-
-# Replace None with 1 (typically for batch dimension)
 input_shape = [dim if dim is not None else 1 for dim in input_shape]
-print("Detected input shape:", input_shape)
 
-# Convert to TFLite
-converter = tf.lite.TFLiteConverter.from_saved_model("saved_model_dir")
+# Print input tensor information
+print("Detected Input Details:")
+print(f"  Name : {input_tensor.name}")
+print(f"  Shape: {input_shape}")
+print(f"  Type : {input_tensor.dtype}")
+
+# Step 2: Set up TFLite converter
+converter = tf.lite.TFLiteConverter.from_saved_model(saved_model_dir)
 converter.optimizations = [tf.lite.Optimize.DEFAULT]
 
-# Representative dataset using corrected input shape
+# Step 3: Define representative dataset
 def representative_data_gen():
     for _ in range(100):
         dummy_input = np.random.rand(*input_shape).astype(np.float32)
         yield [dummy_input]
 
 converter.representative_dataset = representative_data_gen
+
+# Step 4: Enable full INT8 quantization
 converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
 converter.inference_input_type = tf.uint8
 converter.inference_output_type = tf.uint8
 
+# Step 5: Convert and save model
 tflite_quant_model = converter.convert()
 
-with open("model_int8.tflite", "wb") as f:
+output_file = "model_int8.tflite"
+with open(output_file, "wb") as f:
     f.write(tflite_quant_model)
 
-print("INT8 quantized TFLite model saved as model_int8.tflite")
+print(f"\nINT8 quantized TFLite model saved as: {output_file}")
