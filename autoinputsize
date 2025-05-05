@@ -4,14 +4,18 @@ import numpy as np
 # Load model to detect input shape
 model = tf.saved_model.load("saved_model_dir")
 concrete_func = model.signatures["serving_default"]
-input_shape = list(concrete_func.structured_input_signature[1].values())[0].shape
+input_tensor = list(concrete_func.structured_input_signature[1].values())[0]
+input_shape = input_tensor.shape.as_list()
+
+# Replace None with 1 (typically for batch dimension)
+input_shape = [dim if dim is not None else 1 for dim in input_shape]
 print("Detected input shape:", input_shape)
 
 # Convert to TFLite
 converter = tf.lite.TFLiteConverter.from_saved_model("saved_model_dir")
 converter.optimizations = [tf.lite.Optimize.DEFAULT]
 
-# Representative dataset using detected input shape
+# Representative dataset using corrected input shape
 def representative_data_gen():
     for _ in range(100):
         dummy_input = np.random.rand(*input_shape).astype(np.float32)
