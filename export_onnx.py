@@ -1,32 +1,21 @@
-import torch
-import argparse
-import sys
-sys.path.insert(0, '.')
+from onnxruntime.quantization import quantize_static, CalibrationDataReader, QuantType
+import numpy as np
+import os
 
-from darknet2pytorch import Darknet
+class DummyDataReader(CalibrationDataReader):
+    def __init__(self):
+        self.data_iter = iter([
+            {"input": np.random.rand(1, 3, 416, 416).astype(np.float32)}
+            for _ in range(100)
+        ])
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--weights', type=str, required=True)
-parser.add_argument('--cfg', type=str, required=True)
-parser.add_argument('--output', type=str, default='yolov4_tiny.onnx')
-args = parser.parse_args()
+    def get_next(self):
+        return next(self.data_iter, None)
 
-model = Darknet(args.cfg)
-model.load_weights(args.weights)
-model.eval()
-
-dummy_input = torch.randn(1, 3, model.height, model.width)
-torch.onnx.export(
-    model, 
-    dummy_input, 
-    args.output,
-    verbose=False,
-    opset_version=11
+# Run static quantization
+quantize_static(
+    model_input="yolov4_tiny.onnx",
+    model_output="yolov4_tiny_int8.onnx",
+    calibration_data_reader=DummyDataReader(),
+    quant_format=QuantType.QInt8
 )
-
-print(f"✅ ONNX model exported to {args.output}")
-
-
-
-
-python3 tool/export_onnx.py --weights yolov4_tiny.pth --cfg yolov4-tiny.cfg --output yolov4_tiny.onnx
