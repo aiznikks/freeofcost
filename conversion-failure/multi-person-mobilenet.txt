@@ -1,0 +1,28 @@
+I attempted to convert the `multiperson_mobilenet_v1_075_float.tflite` model to INT8 using TensorFlow Lite’s PTQ pipeline. Below is a summary of the results and analysis.
+
+---
+
+Model Details:
+- Model: multiperson_mobilenet_v1_075_float.tflite
+- Format: TFLite float32
+- Purpose: Multi-person pose estimation
+- Goal: Convert to fully quantized INT8 format
+
+---
+
+Conversion Status:
+- Method: TFLiteConverter with representative dataset
+- Result: Conversion failed
+
+---
+
+Failure Reason:
+- Conversion failed due to presence of unsupported control flow ops (`If`, `While`, etc.)
+- The model is originally built using TensorFlow 1.x or early TF2, and uses dynamic control logic
+- TFLite throws the error: "Failed to functionalize ControlFlowV1 ops. Consider using ControlFlowV2"
+
+---
+
+Recommendations:
+- Rebuild or convert a newer version of the model using TF2 and ControlFlowV2
+- Or switch to a more modern TFLite-compatible pose estimation model like MoveNet (TF2)
