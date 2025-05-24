@@ -1,0 +1,43 @@
+Model Details:
+- Model: YOLOv4
+- Original Format: Darknet `.cfg` and `.weights`
+- Conversion Attempted: Darknet → PyTorch → ONNX → TFLite (via intermediate steps)
+- Goal: Convert to fully quantized INT8 TFLite model for performance benchmarking on NPU
+
+---
+
+Conversion Status:
+- Method Used: Exported to ONNX → TensorFlow or TFLite converter
+- Result: Conversion failed in the final TFLite INT8 quantization step
+
+---
+
+Failure Reason:
+- The model architecture includes custom or unsupported layers (e.g., `yolo_layer`, `region`, `upsample`, etc.) that do not map cleanly to TFLite INT8-compatible ops.
+- The model requires extensive preprocessing logic and dynamic operations, which are not compatible with TFLite’s static INT8 operator set (`TFLITE_BUILTINS_INT8`).
+- During conversion, errors were encountered related to:
+  - Missing custom op support (`region`, `yolo`, etc.)
+  - Shape mismatch or dynamic tensor issues
+  - Failed quantization due to non-TFLite-compatible activations or layers
+
+---
+
+Recommended Next Steps:
+
+Option 1: Use TensorFlow-Compatible Object Detectors
+- Switch to TF2 SSD MobileNet or EfficientDet models from the TF2 Detection Zoo
+- These models are easier to convert to INT8 using `SavedModel` + PTQ
+
+Option 2: Use a Lightweight YOLO Variant with ONNX → TFLite Support
+- Try YOLOv5 or YOLOv4-tiny with ONNX export, followed by TFLite conversion with reduced architecture complexity
+- Ensure that only supported ops are used and define a representative dataset for PTQ
+
+Option 3: Deploy YOLOv4 via ONNX Runtime (without INT8)
+- Use ONNX Runtime with quantization-aware ONNX tools (e.g., `onnxruntime.quantization`)
+- While it won’t run on TFLite, it can be deployed in optimized form on CPU or GPU
+
+---
+
+Summary:
+
+The original YOLOv4 model could not be converted into an INT8 TFLite model due to architectural complexity, unsupported custom ops, and incompatibility with the INT8 quantization pipeline in TensorFlow Lite. To proceed with INT8 evaluation or embedded deployment, it is advisable to adopt a more TFLite-friendly object detection model or simplify the YOLO variant being used.
