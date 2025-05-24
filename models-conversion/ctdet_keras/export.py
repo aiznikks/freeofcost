@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from keras_centernet.models.networks.hourglass import HourglassNetwork
 
 heads = {
@@ -15,4 +19,4 @@ kwargs = {
 
 model = HourglassNetwork(heads=heads, **kwargs)
 model.save("centernet_saved_model")
-print("Keras model exported as 'centernet_saved_model'")
+print(" Keras model exported as 'centernet_saved_model'")
