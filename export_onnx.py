@@ -25,3 +25,8 @@ torch.onnx.export(
 )
 
 print(f"✅ ONNX model exported to {args.output}")
+
+
+
+
+python3 tool/export_onnx.py --weights yolov4_tiny.pth --cfg yolov4-tiny.cfg --output yolov4_tiny.onnx
