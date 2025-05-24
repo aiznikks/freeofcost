@@ -2,15 +2,20 @@ from onnxruntime.quantization import quantize_static, CalibrationDataReader, Qua
 import numpy as np
 
 class DummyDataReader(CalibrationDataReader):
+    def __init__(self):
+        self.data_iter = iter([
+            {"input.1": np.random.rand(1, 3, 416, 416).astype(np.float32)}
+            for _ in range(100)
+        ])
+
     def get_next(self):
-        for _ in range(100):
-            yield {"input": np.random.rand(1, 3, 416, 416).astype(np.float32)}
+        return next(self.data_iter, None)
 
 quantize_static(
     model_input="yolov4_tiny.onnx",
     model_output="yolov4_tiny_int8.onnx",
     calibration_data_reader=DummyDataReader(),
-    quant_format=QuantType.QOperator
+    quant_format=QuantType.QOperator,
+    activation_type=QuantType.QUInt8,
+    weight_type=QuantType.QInt8
 )
-
-print("✅ INT8 Quantized model saved: yolov4_tiny_int8.onnx")
