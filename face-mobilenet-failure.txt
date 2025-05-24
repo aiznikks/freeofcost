@@ -1,0 +1,45 @@
+
+Model Details:
+- Model: face_mobilenet_v1
+- Format: Frozen Graph (.pb)
+- Framework: TensorFlow 1.x
+- Type: SSD with MobileNet backbone (trained for face detection)
+- Goal: Convert to INT8 TFLite model for NPU benchmarking
+
+---
+
+Conversion Status:
+- Method Used: TFLiteConverter with PTQ in TensorFlow 2.x
+- Result: Conversion failed
+
+---
+
+Failure Reason:
+- The model includes control flow operations from TensorFlow 1.x such as TensorArrayWriteV3, LoopCond, and While.
+- These ops are part of ControlFlowV1 and are not supported by TFLite’s TFLITE_BUILTINS_INT8 operator set.
+- During conversion, TFLite throws the error:
+  "TensorArrayWriteV3 is neither a custom op nor a flex op"
+- Converting the model into a SavedModel format did not resolve the issue, as these operations remain embedded in the graph.
+- Enabling SELECT_TF_OPS allows partial conversion with Flex fallback, but the resulting model:
+  - Depends on the full TensorFlow runtime
+  - Increases model size
+  - Cannot be deployed efficiently on NPUs or embedded accelerators
+
+---
+
+Recommended Next Steps:
+
+Option 1: Use a TensorFlow 2.x-Compatible Model
+- Train or fine-tune SSD MobileNet V2 on a face dataset (e.g., WIDER FACE)
+- Export it as a SavedModel
+- Apply post-training INT8 quantization (fully compatible with TFLite)
+
+Option 2: Use Pre-Optimized Lightweight Models
+- BlazeFace (MediaPipe):
+  Lightweight and already TFLite-compatible – https://github.com/google/mediapipe/tree/master/mediapipe/models
+- UltraLight Face Detector:
+  Convert from PyTorch to ONNX → TFLite – https://github.com/Linzaer/Ultra-Light-Fast-Generic-Face-Detector-1MB
+
+Both options are known to work well with PTQ and can be deployed on mobile or NPU-based edge platforms.
+
+Let me know if you'd like help choosing or setting up one of these alternatives, or if a new model training pipeline is needed.
