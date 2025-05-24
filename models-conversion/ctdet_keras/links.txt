@@ -1,0 +1,1 @@
+https://github.com/see--/keras-centernet/releases/download/0.1.0/ctdet_coco_hg.hdf5
