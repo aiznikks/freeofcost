@@ -7,3 +7,21 @@ python3 models/tools/convert.py \
   --cfgfile yolov4-tiny.cfg \
   --weightfile yolov4-tiny.weights \
   --output yolov4_tiny.pth
+
+
+
+
+import torch
+from tool.darknet2pytorch import Darknet
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--cfgfile', type=str, required=True)
+parser.add_argument('--weightfile', type=str, required=True)
+parser.add_argument('--output', type=str, required=True)
+args = parser.parse_args()
+
+model = Darknet(args.cfgfile)
+model.load_weights(args.weightfile)
+torch.save(model.state_dict(), args.output)
+print(f"PyTorch model saved to {args.output}")
