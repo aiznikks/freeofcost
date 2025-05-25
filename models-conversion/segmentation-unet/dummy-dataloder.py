@@ -16,3 +16,13 @@ class DummyDataset(tf.keras.utils.Sequence):
 
     def get_output_shape(self):
         return (self.img_size[0], self.img_size[1], 1)
+        
+        
+        
+        
+        #convert-saved-model
+        import tensorflow as tf
+
+model = tf.keras.models.load_model("unet_dummy.h5", compile=False)
+tf.saved_model.save(model, "unet_saved_model")
+        
