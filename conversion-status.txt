@@ -1,0 +1,130 @@
+INT8 Post-Training Quantization (PTQ) Conversion Report
+-------------------------------------------------------
+
+Prepared by: Anirudh Meena
+Date: May 25, 2025
+
+This report tracks the progress and challenges encountered while converting AI benchmark models from FP32 to INT8 using PTQ (Post-Training Quantization), primarily for profiling on the latest NPU against ARM CPU.
+
+==============================
+✅ Successfully Converted Models
+==============================
+
+1. ResNet v1_50
+   - Format: TensorFlow (.pb)
+   - Conversion: ✅ INT8 TFLite generated
+   - Notes: Smooth PTQ using dummy data
+
+2. ResNet v2_50
+   - Format: TensorFlow (.pb)
+   - Conversion: ✅ INT8 TFLite generated
+   - Notes: No major issues
+
+3. Inception v3
+   - Format: TensorFlow (.pb)
+   - Conversion: ✅ INT8 TFLite generated
+   - Notes: Representative dataset using dummy data (1, 299, 299, 3)
+
+4. MobileNet v1_1.0_224
+   - Format: TensorFlow (.pb)
+   - Conversion: ✅ INT8 TFLite generated
+   - Notes: Used dummy input of shape (1, 224, 224, 3)
+
+5. MobileNet v2_1.0_224
+   - Format: TensorFlow (.pb)
+   - Conversion: ✅ INT8 TFLite generated
+   - Notes: Converted with default optimization pipeline
+
+6. EfficientNet-EdgeTPU-S
+   - Format: Pre-quantized TFLite
+   - Conversion: ✅ Already INT8
+   - Notes: Pre-optimized for EdgeTPU, no PTQ needed
+
+7. CenterNet (ctdet_helmet.onnx)
+   - Format: ONNX
+   - Conversion: ✅ Converted to INT8 ONNX
+   - Notes: Used ONNX Runtime quantization APIs
+
+8. U-Net (Segmentation)
+   - Format: Keras (.h5) → SavedModel
+   - Conversion: ✅ INT8 TFLite generated
+   - Notes: Fixed input shape to (128, 128, 16); dummy data used
+
+==============================
+❌ Models Not Yet Converted
+==============================
+
+1. SSD MobileNet v1
+   - Format: TensorFlow (.pb)
+   - Status: ❌ Not converted
+   - Issue: Contains `ControlFlowV1` ops; causes TFLite converter to fail with error:
+     "Failed to functionalize ControlFlowV1 ops. Consider using ControlFlowV2."
+
+2. DeepLabV3+
+   - Format: PyTorch
+   - Status: ❌ Not converted
+   - Notes: Needs PyTorch → ONNX → INT8 conversion pipeline setup
+
+3. Yolov4-Tiny
+   - Format: Darknet / ONNX
+   - Status: ❌ Not converted
+   - Notes: ONNX model conversion attempted, encountered runtime dtype mismatch and QDQ errors
+
+4. Face MobileNetV1 SSD
+   - Format: ONNX
+   - Status: ❌ Not converted
+   - Issue: Placeholder input had shape mismatch; TFLite converter failed
+
+5. FSRCNN
+   - Format: TensorFlow
+   - Status: ❌ Not yet attempted
+   - Notes: Can be handled with dummy LR inputs like (1, 32, 32, 1)
+
+6. EDSR
+   - Format: PyTorch
+   - Status: ❌ Not yet attempted
+   - Notes: Needs export to ONNX first, likely to face upsampling op quantization issues
+
+7. DETR
+   - Format: PyTorch
+   - Status: ❌ Not converted
+   - Notes: Model structure modular; partial success in .pth → ONNX but failed quantization pass
+
+8. CPN (Pose Estimation)
+   - Format: PyTorch
+   - Status: ❌ Not yet attempted
+
+9. Multi-Person MobileNet V1
+   - Format: TensorFlow
+   - Status: ❌ Conversion failed
+   - Error: ControlFlowV1 ops + unsupported reshape op in frozen graph
+
+10. ViT (Vision Transformer)
+    - Format: PyTorch/HuggingFace
+    - Status: ❌ Not yet attempted
+
+11. LLaMA 3.2 3B
+    - Format: HuggingFace Transformers
+    - Status: ❌ Not applicable (model size and ops not TFLite/ONNX friendly)
+
+12. Mistral 7B
+    - Format: HuggingFace
+    - Status: ❌ Not attempted
+
+13. Stable Diffusion 1.5
+    - Format: Diffusers
+    - Status: ❌ Not attempted
+
+14. FLUX
+    - Format: GitHub (BlackForest Labs)
+    - Status: ❌ Not attempted
+
+
+
+
+→ Trying converting: 
+   - SSD_MobileNet_V1 using updated TF2 SavedModel export (from TF1 frozen graph)
+   - DeepLabV3+ using PyTorch → ONNX → INT8
+   - FSRCNN using dummy low-res data
+
+→ Delay ViT, LLMs and Stable Diffusion until NPU or ONNX RT support verified.
