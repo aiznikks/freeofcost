@@ -1,6 +1,3 @@
-import numpy as np
-import tensorflow as tf
-
 class DummyDataset(tf.keras.utils.Sequence):
     def __init__(self, num_samples=20, img_size=(128, 128)):
         self.num_samples = num_samples
@@ -14,7 +11,8 @@ class DummyDataset(tf.keras.utils.Sequence):
         mask = np.random.randint(0, 2, size=(*self.img_size, 1)).astype(np.float32)
         return image, mask
 
-def get_dummy_data():
-    train = DummyDataset(num_samples=30)
-    val = DummyDataset(num_samples=10)
-    return train, val
+    def get_input_shape(self):
+        return (self.img_size[0], self.img_size[1], 1)
+
+    def get_output_shape(self):
+        return (self.img_size[0], self.img_size[1], 1)
