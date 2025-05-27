@@ -1,30 +1,23 @@
-import torch.nn as nnn
+from onnxruntime.quantization import quantize_static, CalibrationDataReader, QuantType
+import numpy as np
 
-class FSRCNN(nn.Module):
-    def __init__(self, upscale_factor):
-        super(FSRCNN, self).__init__()
-        self.first_part = nn.Sequential(
-            nn.Conv2d(1, 56, 5, 1, 2),
-            nn.PReLU(56)
-        )
+# Dummy calibration data reader
+class DummyDataReader(CalibrationDataReader):
+    def __init__(self):
+        self.data = iter([
+            {"input": np.random.rand(1, 1, 32, 32).astype(np.float32)}
+            for _ in range(100)
+        ])
 
-        self.mid_part = nn.Sequential(
-            nn.Conv2d(56, 12, 1),
-            nn.PReLU(12),
-            nn.Conv2d(12, 12, 3, 1, 1),
-            nn.PReLU(12),
-            nn.Conv2d(12, 12, 3, 1, 1),
-            nn.PReLU(12),
-            nn.Conv2d(12, 12, 3, 1, 1),
-            nn.PReLU(12),
-            nn.Conv2d(12, 56, 1),
-            nn.PReLU(56)
-        )
+    def get_next(self):
+        return next(self.data, None)
 
-        self.last_part = nn.ConvTranspose2d(56, 1, 9, stride=upscale_factor, padding=3, output_padding=upscale_factor - 1)
+# Run quantization
+quantize_static(
+    model_input="fsrcnn_fp32.onnx",
+    model_output="fsrcnn_int8.onnx",
+    calibration_data_reader=DummyDataReader(),
+    quant_format=QuantType.QInt8
+)
 
-    def forward(self, x):
-        x = self.first_part(x)
-        x = self.mid_part(x)
-        x = self.last_part(x)
-        return x
+print("✅ INT8 quantization complete. Output saved as fsrcnn_int8.onnx")
