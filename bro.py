@@ -1,24 +1,23 @@
-from onnxruntime.quantization import quantize_static, CalibrationDataReader, QuantType
-import numpy as np
+import torch
+from model import FSRCNN  # from model.py
 import os
 
-# Dummy Data Reader for Calibration
-class DummyDataReader(CalibrationDataReader):
-    def __init__(self):
-        self.data = iter([
-            {"input": np.random.rand(1, 3, 64, 64).astype(np.float32)}
-            for _ in range(100)  # 100 samples for calibration
-        ])
+# Load model
+model = FSRCNN(scale_factor=4)
+model.load_state_dict(torch.load("fsrcnn_x4.pth", map_location='cpu'))  # Update if name differs
+model.eval()
 
-    def get_next(self):
-        return next(self.data, None)
+# Dummy input (grayscale input image: 1x1x32x32)
+dummy_input = torch.randn(1, 1, 32, 32)
 
-# Quantize the model
-quantize_static(
-    model_input="edsr_fp32.onnx",
-    model_output="edsr_int8.onnx",
-    calibration_data_reader=DummyDataReader(),
-    quant_format=QuantType.QInt8
+# Export to ONNX
+torch.onnx.export(
+    model,
+    dummy_input,
+    "fsrcnn_fp32.onnx",
+    input_names=["input"],
+    output_names=["output"],
+    opset_version=13
 )
 
-print("Quantization complete. INT8 model saved as edsr_int8.onnx")
+print("Exported FSRCNN model to fsrcnn_fp32.onnx")
