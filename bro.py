@@ -1,4 +1,4 @@
-import torch.nn as nn
+import torch.nn as nnn
 
 class FSRCNN(nn.Module):
     def __init__(self, upscale_factor):
