@@ -1,48 +1,39 @@
-import onnx
+import os
+import numpy as np
+from PIL import Image
+from onnxruntime.quantization import quantize_static, CalibrationDataReader, QuantType
 
-# Load model
-model = onnx.load("yolov4-tiny-single-batch.onnx")
+# Step 1: Define the Calibration Data Reader
+class YOLOv4TinyDataReader(CalibrationDataReader):
+    def __init__(self, image_dir):
+        self.image_paths = [
+            os.path.join(image_dir, f)
+            for f in os.listdir(image_dir)
+            if f.lower().endswith(('.jpg', '.jpeg', '.png'))
+        ]
+        self.index = 0
 
-# Reshape nodes to remove
-reshape_nodes_to_remove = [
-    "030_convolutional_reshape_1",
-    "030_convolutional_reshape_2",
-    "037_convolutional_reshape_1",
-    "037_convolutional_reshape_2"
-]
+    def get_next(self):
+        if self.index >= len(self.image_paths):
+            return None
 
-# Shape initializers to remove
-shape_initializers_to_remove = [
-    "030_convolutional_shape",
-    "030_convolutional_transpose_shape",
-    "037_convolutional_shape",
-    "037_convolutional_transpose_shape"
-]
+        image = Image.open(self.image_paths[self.index]).resize((416, 416)).convert("RGB")
+        image = np.asarray(image).astype(np.float32) / 255.0
+        image = np.transpose(image, (2, 0, 1))  # HWC → CHW
+        image = np.expand_dims(image, axis=0)   # Add batch dim → (1, 3, 416, 416)
 
-# Remove reshape nodes
-filtered_nodes = []
-for node in model.graph.node:
-    if node.name not in reshape_nodes_to_remove:
-        filtered_nodes.append(node)
-del model.graph.node[:]
-model.graph.node.extend(filtered_nodes)
+        self.index += 1
+        return {"000_net": image}  # Replace "000_net" if your input name is different
 
-# Remove initializers
-filtered_inits = []
-for init in model.graph.initializer:
-    if init.name not in shape_initializers_to_remove:
-        filtered_inits.append(init)
-del model.graph.initializer[:]
-model.graph.initializer.extend(filtered_inits)
+# Step 2: Create the calibration reader
+reader = YOLOv4TinyDataReader("image_dir")  # replace with your image folder path
 
-# Remove inputs that match those initializers
-filtered_inputs = []
-for inp in model.graph.input:
-    if inp.name not in shape_initializers_to_remove:
-        filtered_inputs.append(inp)
-del model.graph.input[:]
-model.graph.input.extend(filtered_inputs)
+# Step 3: Run quantization
+quantize_static(
+    model_input="yolov4-tiny-clean.onnx",
+    model_output="yolov4-tiny-int8.onnx",
+    calibration_data_reader=reader,
+    quant_format=QuantType.QInt8
+)
 
-# Save patched model
-onnx.save(model, "yolov4-tiny-clean.onnx")
-print("✅ Clean model saved as yolov4-tiny-clean.onnx")
+print("✅ INT8 Quantization Complete: yolov4-tiny-int8.onnx generated")
