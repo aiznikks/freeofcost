@@ -1,79 +1,96 @@
 import os
-import cv2
-from xml.etree.ElementTree import Element, SubElement, tostring
-from xml.dom.minidom import parseString
+import glob
+import pandas as pd
+import tensorflow as tf
+import xml.etree.ElementTree as ET
+from object_detection.utils import dataset_util
 
-ANNOTATION_FILE = "wider_face_split/wider_face_train_bbx_gt.txt"
-IMAGE_DIR = "WIDER_train/images"
-OUTPUT_DIR = "annotations_xml"
+flags = tf.compat.v1.app.flags
+flags.DEFINE_string('xml_dir', 'annotations_xml', 'Path to the XML annotations')
+flags.DEFINE_string('image_dir', 'WIDER_train/images', 'Path to images')
+flags.DEFINE_string('output_path', 'train.record', 'Path to output TFRecord')
+flags.DEFINE_string('label_map_path', 'label_map.pbtxt', 'Path to label map')
+FLAGS = flags.FLAGS
 
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+def xml_to_csv(xml_dir):
+    xml_list = []
+    for xml_file in glob.glob(xml_dir + '/*.xml'):
+        tree = ET.parse(xml_file)
+        root = tree.getroot()
+        for member in root.findall('object'):
+            value = (
+                root.find('filename').text,
+                int(root.find('size')[0].text),
+                int(root.find('size')[1].text),
+                member[0].text,
+                int(member[4][0].text),
+                int(member[4][1].text),
+                int(member[4][2].text),
+                int(member[4][3].text)
+            )
+            xml_list.append(value)
+    column_name = ['filename', 'width', 'height', 'class', 'xmin', 'ymin', 'xmax', 'ymax']
+    return pd.DataFrame(xml_list, columns=column_name)
 
-def create_xml(image_path, image_name, bboxes):
-    img = cv2.imread(image_path)
-    height, width, depth = img.shape
+def class_text_to_int(row_label):
+    if row_label == 'face':
+        return 1
+    else:
+        return None
 
-    annotation = Element('annotation')
-    SubElement(annotation, 'folder').text = 'WIDER_train'
-    SubElement(annotation, 'filename').text = image_name
-    SubElement(annotation, 'path').text = image_path
+def create_tf_example(group, path):
+    with tf.io.gfile.GFile(os.path.join(path, '{}'.format(group.filename)), 'rb') as fid:
+        encoded_jpg = fid.read()
+    filename = group.filename.encode('utf8')
+    image_format = b'jpg'
+    width = int(group.width.iloc[0])
+    height = int(group.height.iloc[0])
 
-    size = SubElement(annotation, 'size')
-    SubElement(size, 'width').text = str(width)
-    SubElement(size, 'height').text = str(height)
-    SubElement(size, 'depth').text = str(depth)
+    xmins, xmaxs, ymins, ymaxs, classes_text, classes = [], [], [], [], [], []
 
-    for bbox in bboxes:
-        obj = SubElement(annotation, 'object')
-        SubElement(obj, 'name').text = 'face'
-        SubElement(obj, 'pose').text = 'Unspecified'
-        SubElement(obj, 'truncated').text = '0'
-        SubElement(obj, 'difficult').text = '0'
+    for index, row in group.object.iterrows():
+        xmins.append(row.xmin / width)
+        xmaxs.append(row.xmax / width)
+        ymins.append(row.ymin / height)
+        ymaxs.append(row.ymax / height)
+        classes_text.append(row['class'].encode('utf8'))
+        classes.append(class_text_to_int(row['class']))
 
-        bndbox = SubElement(obj, 'bndbox')
-        SubElement(bndbox, 'xmin').text = str(int(bbox[0]))
-        SubElement(bndbox, 'ymin').text = str(int(bbox[1]))
-        SubElement(bndbox, 'xmax').text = str(int(bbox[0] + bbox[2]))
-        SubElement(bndbox, 'ymax').text = str(int(bbox[1] + bbox[3]))
+    tf_example = tf.train.Example(features=tf.train.Features(feature={
+        'image/height': dataset_util.int64_feature(height),
+        'image/width': dataset_util.int64_feature(width),
+        'image/filename': dataset_util.bytes_feature(filename),
+        'image/source_id': dataset_util.bytes_feature(filename),
+        'image/encoded': dataset_util.bytes_feature(encoded_jpg),
+        'image/format': dataset_util.bytes_feature(image_format),
+        'image/object/bbox/xmin': dataset_util.float_list_feature(xmins),
+        'image/object/bbox/xmax': dataset_util.float_list_feature(xmaxs),
+        'image/object/bbox/ymin': dataset_util.float_list_feature(ymins),
+        'image/object/bbox/ymax': dataset_util.float_list_feature(ymaxs),
+        'image/object/class/text': dataset_util.bytes_list_feature(classes_text),
+        'image/object/class/label': dataset_util.int64_list_feature(classes),
+    }))
+    return tf_example
 
-    rough_string = tostring(annotation, 'utf-8')
-    reparsed = parseString(rough_string)
-    with open(os.path.join(OUTPUT_DIR, image_name.replace('.jpg', '.xml')), 'w') as f:
-        f.write(reparsed.toprettyxml(indent="  "))
+def split(df, group):
+    data = namedtuple('data', ['filename', 'object'])
+    gb = df.groupby(group)
+    return [data(filename, gb.get_group(x)) for filename, x in zip(gb.groups.keys(), gb.groups)]
 
-def parse_annotations():
-    with open(ANNOTATION_FILE, 'r') as f:
-        lines = [line.strip() for line in f if line.strip() != ""]
+from collections import namedtuple
 
-    i = 0
-    total = len(lines)
-    while i < total:
-        image_rel_path = lines[i]
-        image_path = os.path.join(IMAGE_DIR, image_rel_path)
-        image_name = os.path.basename(image_path)
-        i += 1
+def main(_):
+    writer = tf.io.TFRecordWriter(FLAGS.output_path)
+    path = FLAGS.image_dir
+    examples = xml_to_csv(FLAGS.xml_dir)
+    grouped = split(examples, 'filename')
 
-        try:
-            face_count = int(lines[i])
-        except ValueError:
-            print(f"❌ Skipping invalid line: {lines[i]}")
-            i += 1
-            continue
-        i += 1
+    for group in grouped:
+        tf_example = create_tf_example(group, path)
+        writer.write(tf_example.SerializeToString())
 
-        bboxes = []
-        for _ in range(face_count):
-            if i >= total:
-                break
-            parts = lines[i].strip().split()
-            if len(parts) >= 4:
-                x, y, w, h = map(float, parts[:4])
-                if w > 0 and h > 0:
-                    bboxes.append((x, y, w, h))
-            i += 1
+    writer.close()
+    print(f"✅ Successfully created TFRecord at: {FLAGS.output_path}")
 
-        if os.path.exists(image_path) and bboxes:
-            try:
-                create_xml(image_path, image_name, bboxes)
-            except:
-                print(f"❌ Error processing: {image_path}")
+if __name__ == '__main__':
+    tf.compat.v1.app.run()
