@@ -1,40 +1,29 @@
-import onnx
+import tensorflow as tf
+import numpy as np
 
-# Load model
-model = onnx.load("yolov4-tiny-fullyclean.onnx")
+# Path to your SSD MobileNet V1 SavedModel
+saved_model_dir = "ssd_mobilenet_v1/saved_model"  # change this if needed
 
-# Offending tensors/nodes to remove
-offending_names = {
-    "030_convolutional_shape",
-    "030_convolutional_transpose_shape",
-    "037_convolutional_shape",
-    "037_convolutional_transpose_shape",
-    "030_convolutional_reshape_1",
-    "030_convolutional_reshape_2",
-    "037_convolutional_reshape_1",
-    "037_convolutional_reshape_2"
-}
+# Representative dataset generator
+def representative_data_gen():
+    for _ in range(100):
+        # Shape must match model input, often [1, 300, 300, 3] for SSD MobileNet
+        dummy_input = np.random.rand(1, 300, 300, 3).astype(np.float32)
+        yield [dummy_input]
 
-# Step 1: Clean nodes
-clean_nodes = [n for n in model.graph.node if all(inp not in offending_names for inp in n.input)]
-model.graph.ClearField("node")
-model.graph.node.extend(clean_nodes)
+# Create converter
+converter = tf.lite.TFLiteConverter.from_saved_model(saved_model_dir)
+converter.optimizations = [tf.lite.Optimize.DEFAULT]
+converter.representative_dataset = representative_data_gen
 
-# Step 2: Clean initializers
-clean_init = [i for i in model.graph.initializer if i.name not in offending_names]
-model.graph.ClearField("initializer")
-model.graph.initializer.extend(clean_init)
+# Do not set input/output type for float32 I/O
+# This allows INT8 weights/activations but keeps input/output in float
 
-# Step 3: Clean inputs
-clean_inputs = [i for i in model.graph.input if i.name not in offending_names]
-model.graph.ClearField("input")
-model.graph.input.extend(clean_inputs)
+# Convert
+tflite_model = converter.convert()
 
-# Step 4: Clean value_info (optional metadata)
-clean_values = [v for v in model.graph.value_info if v.name not in offending_names]
-model.graph.ClearField("value_info")
-model.graph.value_info.extend(clean_values)
+# Save to .tflite file
+with open("ssd_mobilenet_v1_int8_float_io.tflite", "wb") as f:
+    f.write(tflite_model)
 
-# Save model
-onnx.save(model, "yolov4-tiny-finalfinal.onnx")
-print("✅ Saved as yolov4-tiny-finalfinal.onnx — every reference is purged")
+print("Conversion completed: ssd_mobilenet_v1_int8_float_io.tflite")
