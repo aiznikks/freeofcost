@@ -1,42 +1,44 @@
-import os
-import numpy as np
-from PIL import Image
-from onnxruntime.quantization import quantize_static, CalibrationDataReader, QuantType
+import onnx
 
-# 💡 STEP 1: Custom reader to preprocess COCO val images
-class YOLOv4TinyDataReader(CalibrationDataReader):
-    def __init__(self, image_dir):
-        self.image_paths = [
-            os.path.join(image_dir, f)
-            for f in os.listdir(image_dir)
-            if f.lower().endswith(('.jpg', '.jpeg', '.png'))
-        ]
-        self.index = 0
+# Load the model
+model = onnx.load("yolov4-tiny-clean.onnx")
 
-    def get_next(self):
-        while self.index < len(self.image_paths):
-            try:
-                img = Image.open(self.image_paths[self.index]).convert("RGB")
-                img = img.resize((416, 416))
-                img = np.asarray(img).astype(np.float32) / 255.0
-                img = np.transpose(img, (2, 0, 1))
-                img = np.expand_dims(img, axis=0)
-                self.index += 1
-                return {"000_net": img}  # 🔁 Check this input name in Netron if needed
-            except Exception as e:
-                print(f"⚠️ Skipping corrupted image: {self.image_paths[self.index]}")
-                self.index += 1
-        return None
+# These are known problematic initializers and reshape references
+shape_names_to_remove = [
+    "030_convolutional_shape",
+    "030_convolutional_transpose_shape",
+    "037_convolutional_shape",
+    "037_convolutional_transpose_shape"
+]
 
-# 💡 STEP 2: Path to COCO val images
-reader = YOLOv4TinyDataReader("/path/to/val2017")  # <-- REPLACE THIS with your real path
+# Step 1: Remove nodes that use these as inputs
+filtered_nodes = []
+for node in model.graph.node:
+    if not any(shape in node.input for shape in shape_names_to_remove):
+        filtered_nodes.append(node)
 
-# 💡 STEP 3: Run Quantization
-quantize_static(
-    model_input="yolov4-tiny-final.onnx",
-    model_output="yolov4-tiny-int8.onnx",
-    calibration_data_reader=reader,
-    quant_format=QuantType.QInt8
-)
+# Step 2: Remove any leftover initializers with those names
+filtered_initializers = [
+    init for init in model.graph.initializer
+    if init.name not in shape_names_to_remove
+]
 
-print("🎉 Done: yolov4-tiny-int8.onnx saved successfully!")
+# Step 3: Remove input tensors that reference those names
+filtered_inputs = [
+    inp for inp in model.graph.input
+    if inp.name not in shape_names_to_remove
+]
+
+# Apply all the filtered components
+del model.graph.node[:]
+model.graph.node.extend(filtered_nodes)
+
+del model.graph.initializer[:]
+model.graph.initializer.extend(filtered_initializers)
+
+del model.graph.input[:]
+model.graph.input.extend(filtered_inputs)
+
+# Save it clean
+onnx.save(model, "yolov4-tiny-fullyclean.onnx")
+print("✅ Fully cleaned model saved as yolov4-tiny-fullyclean.onnx")
