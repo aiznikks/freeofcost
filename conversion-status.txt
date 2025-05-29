@@ -3,3 +3,7 @@ python generate_tfrecord.py \
   --image_dir=WIDER_train/images \
   --output_path=train.record \
   --label_map_path=label_map.pbtxt
+
+
+
+export PYTHONPATH=$PYTHONPATH:$(pwd)/models-master:$(pwd)/models-master/research:$(pwd)/models-master/research/slim
