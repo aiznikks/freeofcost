@@ -5,7 +5,7 @@ tf.compat.v1.disable_eager_execution()
 
 frozen_graph_path = "ssd_mobilenet_v1_coco_2018_01_28/frozen_inference_graph.pb"
 
-# Use TFLiteConverter from TF1 compatibility mode
+# Setup converter using TF1 frozen graph
 converter = tf.compat.v1.lite.TFLiteConverter.from_frozen_graph(
     graph_def_file=frozen_graph_path,
     input_arrays=["image_tensor"],
@@ -18,14 +18,14 @@ converter = tf.compat.v1.lite.TFLiteConverter.from_frozen_graph(
     ]
 )
 
-# Dynamic range quantization (weight quantization)
+# Apply weight-only quantization
 converter.optimizations = [tf.lite.Optimize.DEFAULT]
 
-# Convert
+# Convert the model
 tflite_model = converter.convert()
 
-# Save
-with open("ssd_mobilenet_v1_weights_quant.tflite", "wb") as f:
+# Save the TFLite file
+with open("ssd_mobilenet_v1_dynamic_quant.tflite", "wb") as f:
     f.write(tflite_model)
 
-print("✅ TFLite conversion with weight quantization done!")
+print("✅ Done: Quantized model saved as ssd_mobilenet_v1_dynamic_quant.tflite")
