@@ -1,10 +1,12 @@
 import tensorflow as tf
 
-# Path to your TF1 frozen graph
+# Enable TF1 compatibility mode
+tf.compat.v1.disable_eager_execution()
+
 frozen_graph_path = "ssd_mobilenet_v1_coco_2018_01_28/frozen_inference_graph.pb"
 
-# TFLite converter setup for frozen graph
-converter = tf.lite.TFLiteConverter.from_frozen_graph(
+# Use TFLiteConverter from TF1 compatibility mode
+converter = tf.compat.v1.lite.TFLiteConverter.from_frozen_graph(
     graph_def_file=frozen_graph_path,
     input_arrays=["image_tensor"],
     input_shapes={"image_tensor": [1, 300, 300, 3]},
@@ -16,14 +18,14 @@ converter = tf.lite.TFLiteConverter.from_frozen_graph(
     ]
 )
 
-# Enable dynamic range quantization (weights only)
+# Dynamic range quantization (weight quantization)
 converter.optimizations = [tf.lite.Optimize.DEFAULT]
 
-# Convert model
+# Convert
 tflite_model = converter.convert()
 
-# Save it
+# Save
 with open("ssd_mobilenet_v1_weights_quant.tflite", "wb") as f:
     f.write(tflite_model)
 
-print("✅ Converted with weight-only quantization.")
+print("✅ TFLite conversion with weight quantization done!")
