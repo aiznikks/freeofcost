@@ -43,21 +43,28 @@ def create_xml(image_path, image_name, bboxes):
 
 def parse_annotations():
     with open(ANNOTATION_FILE, 'r') as f:
-        lines = f.readlines()
+        lines = [line.strip() for line in f if line.strip() != ""]
 
     i = 0
     total = len(lines)
     while i < total:
-        image_rel_path = lines[i].strip()
+        image_rel_path = lines[i]
         image_path = os.path.join(IMAGE_DIR, image_rel_path)
         image_name = os.path.basename(image_path)
         i += 1
 
-        face_count = int(lines[i].strip())
+        try:
+            face_count = int(lines[i])
+        except ValueError:
+            print(f"❌ Skipping invalid line: {lines[i]}")
+            i += 1
+            continue
         i += 1
 
         bboxes = []
         for _ in range(face_count):
+            if i >= total:
+                break
             parts = lines[i].strip().split()
             if len(parts) >= 4:
                 x, y, w, h = map(float, parts[:4])
@@ -70,5 +77,3 @@ def parse_annotations():
                 create_xml(image_path, image_name, bboxes)
             except:
                 print(f"❌ Error processing: {image_path}")
-
-parse_annotations()
