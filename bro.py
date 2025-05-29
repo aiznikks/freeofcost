@@ -3,7 +3,7 @@ import onnx
 # Load model
 model = onnx.load("yolov4-tiny-fullyclean.onnx")
 
-# Set of all problem tensor names
+# Offending tensors/nodes to remove
 offending_names = {
     "030_convolutional_shape",
     "030_convolutional_transpose_shape",
@@ -15,18 +15,26 @@ offending_names = {
     "037_convolutional_reshape_2"
 }
 
-# 1. Remove any nodes using these names
-model.graph.node[:] = [n for n in model.graph.node if all(inp not in offending_names for inp in n.input)]
+# Step 1: Clean nodes
+clean_nodes = [n for n in model.graph.node if all(inp not in offending_names for inp in n.input)]
+model.graph.ClearField("node")
+model.graph.node.extend(clean_nodes)
 
-# 2. Remove initializers
-model.graph.initializer[:] = [i for i in model.graph.initializer if i.name not in offending_names]
+# Step 2: Clean initializers
+clean_init = [i for i in model.graph.initializer if i.name not in offending_names]
+model.graph.ClearField("initializer")
+model.graph.initializer.extend(clean_init)
 
-# 3. Remove inputs
-model.graph.input[:] = [i for i in model.graph.input if i.name not in offending_names]
+# Step 3: Clean inputs
+clean_inputs = [i for i in model.graph.input if i.name not in offending_names]
+model.graph.ClearField("input")
+model.graph.input.extend(clean_inputs)
 
-# 4. Remove from value_info (optional metadata)
-model.graph.value_info[:] = [v for v in model.graph.value_info if v.name not in offending_names]
+# Step 4: Clean value_info (optional metadata)
+clean_values = [v for v in model.graph.value_info if v.name not in offending_names]
+model.graph.ClearField("value_info")
+model.graph.value_info.extend(clean_values)
 
-# 5. Save cleaned model
+# Save model
 onnx.save(model, "yolov4-tiny-finalfinal.onnx")
-print("✅ Saved as yolov4-tiny-finalfinal.onnx — all shape references are gone")
+print("✅ Saved as yolov4-tiny-finalfinal.onnx — every reference is purged")
