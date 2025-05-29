@@ -1,36 +1,31 @@
 import tensorflow as tf
 import numpy as np
 
-# Path to your SavedModel
-saved_model_dir = "saved_model_dir"
+# Path to unpacked float32 SavedModel
+saved_model_dir = "ssd_mobilenet_v1_640x640_coco17_tpu-8/saved_model"
 
-# 1. Create TFLite converter
+# 1. Create converter
 converter = tf.lite.TFLiteConverter.from_saved_model(saved_model_dir)
-
-# 2. Resize input to fixed shape required for PTQ
-converter.resize_input_tensor(0, [1, 300, 300, 3])  # SSD MobileNet standard input
-
-# 3. Set optimization
 converter.optimizations = [tf.lite.Optimize.DEFAULT]
 
-# 4. Provide a representative dataset for calibration (INT8 activation scaling)
+# 2. Set input/output to int8
+converter.inference_input_type = tf.int8
+converter.inference_output_type = tf.int8
+converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+
+# 3. Provide representative dataset
 def representative_data_gen():
     for _ in range(100):
-        dummy_input = np.random.randint(0, 256, size=(1, 300, 300, 3), dtype=np.uint8)
+        dummy_input = np.random.rand(1, 640, 640, 3).astype(np.float32)
         yield [dummy_input]
 
 converter.representative_dataset = representative_data_gen
 
-# 5. Set input and output types for full INT8 model
-converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-converter.inference_input_type = tf.uint8
-converter.inference_output_type = tf.uint8
-
-# 6. Convert model
+# 4. Convert
 tflite_model = converter.convert()
 
-# 7. Save model
+# 5. Save
 with open("ssd_mobilenet_v1_int8.tflite", "wb") as f:
     f.write(tflite_model)
 
-print("✅ INT8 TFLite model saved as ssd_mobilenet_v1_int8.tflite")
+print("✅ PTQ done: ssd_mobilenet_v1_int8.tflite saved.")
