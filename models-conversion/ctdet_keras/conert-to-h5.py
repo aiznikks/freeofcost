@@ -1,31 +1,30 @@
 import tensorflow as tf
+import numpy as np
 
-# Enable TF1 compatibility mode
-tf.compat.v1.disable_eager_execution()
+# Path to your TF2 saved model
+saved_model_dir = "ssd_mobilenet_v1_fpn_640x640_coco17_tpu-8/saved_model"
 
-frozen_graph_path = "ssd_mobilenet_v1_coco_2018_01_28/frozen_inference_graph.pb"
+# Create the converter
+converter = tf.lite.TFLiteConverter.from_saved_model(saved_model_dir)
 
-# Setup converter using TF1 frozen graph
-converter = tf.compat.v1.lite.TFLiteConverter.from_frozen_graph(
-    graph_def_file=frozen_graph_path,
-    input_arrays=["image_tensor"],
-    input_shapes={"image_tensor": [1, 300, 300, 3]},
-    output_arrays=[
-        "detection_boxes",
-        "detection_scores",
-        "detection_classes",
-        "num_detections"
-    ]
-)
-
-# Apply weight-only quantization
+# Enable PTQ
 converter.optimizations = [tf.lite.Optimize.DEFAULT]
+converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+converter.inference_input_type = tf.int8
+converter.inference_output_type = tf.int8
+
+# Dummy representative dataset for calibration (matches input shape)
+def representative_data_gen():
+    for _ in range(100):
+        yield [np.random.rand(1, 640, 640, 3).astype(np.float32)]
+
+converter.representative_dataset = representative_data_gen
 
 # Convert the model
 tflite_model = converter.convert()
 
-# Save the TFLite file
-with open("ssd_mobilenet_v1_dynamic_quant.tflite", "wb") as f:
+# Save it
+with open("ssd_mobilenet_v1_fpn_640x640_int8.tflite", "wb") as f:
     f.write(tflite_model)
 
-print("✅ Done: Quantized model saved as ssd_mobilenet_v1_dynamic_quant.tflite")
+print("✅ PTQ done. INT8 TFLite model saved.")
