@@ -1,29 +1,33 @@
 import tensorflow as tf
 import numpy as np
 
-# Path to your SSD MobileNet V1 SavedModel
-saved_model_dir = "ssd_mobilenet_v1/saved_model"  # change this if needed
+# Path to your SSD MobileNet V1 SavedModel directory
+saved_model_dir = "ssd_mobilenet_v1/saved_model"
 
-# Representative dataset generator
+# Representative dataset for calibration
 def representative_data_gen():
     for _ in range(100):
-        # Shape must match model input, often [1, 300, 300, 3] for SSD MobileNet
-        dummy_input = np.random.rand(1, 300, 300, 3).astype(np.float32)
-        yield [dummy_input]
+        data = np.random.rand(1, 300, 300, 3).astype(np.float32)
+        yield [data]
 
 # Create converter
 converter = tf.lite.TFLiteConverter.from_saved_model(saved_model_dir)
 converter.optimizations = [tf.lite.Optimize.DEFAULT]
 converter.representative_dataset = representative_data_gen
 
-# Do not set input/output type for float32 I/O
-# This allows INT8 weights/activations but keeps input/output in float
+# Explicitly prevent TFLite from changing I/O types
+converter.target_spec.supported_ops = [
+    tf.lite.OpsSet.TFLITE_BUILTINS,        # For float ops
+    tf.lite.OpsSet.TFLITE_BUILTINS_INT8    # For int8 weights
+]
 
-# Convert
+# Do NOT force inference_input/output_type
+
+# Convert model
 tflite_model = converter.convert()
 
-# Save to .tflite file
-with open("ssd_mobilenet_v1_int8_float_io.tflite", "wb") as f:
+# Save to file
+with open("ssd_mobilenet_v1_quantized_float_io.tflite", "wb") as f:
     f.write(tflite_model)
 
-print("Conversion completed: ssd_mobilenet_v1_int8_float_io.tflite")
+print("✅ Conversion done: ssd_mobilenet_v1_quantized_float_io.tflite")
