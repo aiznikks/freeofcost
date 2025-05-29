@@ -1,9 +1,9 @@
 import onnx
 
-# Load the model
+# Load the broken model
 model = onnx.load("yolov4-tiny-clean.onnx")
 
-# These are known problematic initializers and reshape references
+# Problem shape names
 shape_names_to_remove = [
     "030_convolutional_shape",
     "030_convolutional_transpose_shape",
@@ -11,34 +11,32 @@ shape_names_to_remove = [
     "037_convolutional_transpose_shape"
 ]
 
-# Step 1: Remove nodes that use these as inputs
-filtered_nodes = []
+# Step 1: Remove nodes that reference any of those as input
+clean_nodes = []
 for node in model.graph.node:
     if not any(shape in node.input for shape in shape_names_to_remove):
-        filtered_nodes.append(node)
+        clean_nodes.append(node)
 
-# Step 2: Remove any leftover initializers with those names
-filtered_initializers = [
+model.graph.ClearField("node")
+model.graph.node.extend(clean_nodes)
+
+# Step 2: Remove those names from initializers
+model.graph.initializer[:] = [
     init for init in model.graph.initializer
     if init.name not in shape_names_to_remove
 ]
 
-# Step 3: Remove input tensors that reference those names
-filtered_inputs = [
-    inp for inp in model.graph.input
-    if inp.name not in shape_names_to_remove
+# Step 3: Remove from graph inputs
+model.graph.input[:] = [
+    i for i in model.graph.input
+    if i.name not in shape_names_to_remove
 ]
 
-# Apply all the filtered components
-del model.graph.node[:]
-model.graph.node.extend(filtered_nodes)
+# Step 4: Double-check no node still references it
+for node in model.graph.node:
+    for name in shape_names_to_remove:
+        assert name not in node.input, f"🚨 Node still references {name}"
 
-del model.graph.initializer[:]
-model.graph.initializer.extend(filtered_initializers)
-
-del model.graph.input[:]
-model.graph.input.extend(filtered_inputs)
-
-# Save it clean
-onnx.save(model, "yolov4-tiny-fullyclean.onnx")
-print("✅ Fully cleaned model saved as yolov4-tiny-fullyclean.onnx")
+# Save cleaned model
+onnx.save(model, "yolov4-tiny-ultraclean.onnx")
+print("✅ Saved as yolov4-tiny-ultraclean.onnx — no broken references remain.")
