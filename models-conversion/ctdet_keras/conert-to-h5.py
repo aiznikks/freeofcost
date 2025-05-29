@@ -1,36 +1,23 @@
 import tensorflow as tf
-import numpy as np
 
-# Path to your SavedModel directory (not the .pb file)
-saved_model_dir = "ssd_mobilenet_v1/saved_model"  # adjust if needed
+# Load the converted TFLite model
+interpreter = tf.lite.Interpreter(model_path="ssd_mobilenet_v1_weight_quant.tflite")
+interpreter.allocate_tensors()
 
-# Define dummy input similar to real input (for calibration)
-def representative_data_gen():
-    for _ in range(100):
-        yield [np.random.rand(1, 300, 300, 3).astype(np.float32)]
+# Get input details
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
 
-# Load converter
-converter = tf.lite.TFLiteConverter.from_saved_model(saved_model_dir)
+print("🔷 Input Tensor(s):")
+for i, inp in enumerate(input_details):
+    print(f"  Input {i}:")
+    print(f"    Name: {inp['name']}")
+    print(f"    Shape: {inp['shape']}")
+    print(f"    Dtype: {inp['dtype']}")
 
-# Enable optimization
-converter.optimizations = [tf.lite.Optimize.DEFAULT]
-
-# Provide representative dataset
-converter.representative_dataset = representative_data_gen
-
-# Allow both float and int8 ops to prevent input type mismatch
-converter.target_spec.supported_ops = [
-    tf.lite.OpsSet.TFLITE_BUILTINS,         # float ops (for I/O)
-    tf.lite.OpsSet.TFLITE_BUILTINS_INT8     # int8 weights/internal
-]
-
-# DO NOT SET inference_input_type / inference_output_type
-
-# Convert
-tflite_model = converter.convert()
-
-# Save model
-with open("ssd_mobilenet_v1_int8_float_io.tflite", "wb") as f:
-    f.write(tflite_model)
-
-print("✅ Conversion successful!")
+print("\n🔶 Output Tensor(s):")
+for i, out in enumerate(output_details):
+    print(f"  Output {i}:")
+    print(f"    Name: {out['name']}")
+    print(f"    Shape: {out['shape']}")
+    print(f"    Dtype: {out['dtype']}")
