@@ -1,1 +1,2 @@
-https://github.com/see--/keras-centernet/releases/download/0.1.0/ctdet_coco_hg.hdf5
+wget http://download.tensorflow.org/models/object_detection/tf2/20200711/ssd_mobilenet_v1_640x640_coco17_tpu-8.tar.gz
+tar -xvf ssd_mobilenet_v1_640x640_coco17_tpu-8.tar.gz
