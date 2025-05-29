@@ -1,9 +1,7 @@
-python generate_tfrecord.py \
-  --xml_dir=annotations_xml \
-  --image_dir=WIDER_train/images \
-  --output_path=train.record \
-  --label_map_path=label_map.pbtxt
-
+python3 models-master/research/object_detection/model_main_tf2.py \
+  --pipeline_config_path=face_ssd.config \
+  --model_dir=training/ \
+  --alsologtostderr
 
 
 export PYTHONPATH=$PYTHONPATH:$(pwd)/models-master:$(pwd)/models-master/research:$(pwd)/models-master/research/slim
