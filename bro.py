@@ -7,15 +7,16 @@ def representative_dataset():
         dummy = np.random.randint(0, 256, size=(1, 300, 300, 3), dtype=np.uint8)
         yield [dummy]
 
-# Create converter
+# Create converter (TF1.15 style)
 converter = tf.lite.TFLiteConverter.from_saved_model("face_ssd_saved_model")
 converter.optimizations = [tf.lite.Optimize.DEFAULT]
 converter.representative_dataset = representative_dataset
 
-# Fix input shape
-converter.resize_input_tensor(0, [1, 300, 300, 3])
+# Fix input shape — TF1 style:
+converter.input_arrays = ["image_tensor"]
+converter.input_shapes = {"image_tensor": [1, 300, 300, 3]}
 
-# Set INT8 quantization (backbone INT8, input/output uint8 safest)
+# INT8 quantization
 converter.target_spec.supported_ops = [
     tf.lite.OpsSet.TFLITE_BUILTINS_INT8,
     tf.lite.OpsSet.TFLITE_BUILTINS
