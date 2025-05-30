@@ -1,147 +1,34 @@
-model {
-  ssd {
-    num_classes: 1
-    image_resizer {
-      fixed_shape_resizer {
-        height: 300
-        width: 300
-      }
-    }
-    feature_extractor {
-      type: "ssd_mobilenet_v1"
-      depth_multiplier: 1.0
-      min_depth: 16
-      conv_hyperparams {
-        regularizer {
-          l2_regularizer {
-            weight: 0.00004
-          }
-        }
-        initializer {
-          truncated_normal_initializer {
-            stddev: 0.03
-          }
-        }
-        activation: RELU_6
-        batch_norm {
-          train: true
-          scale: true
-          center: true
-          decay: 0.9997
-          epsilon: 0.001
-        }
-      }
-    }
-    box_coder {
-      faster_rcnn_box_coder {
-        y_scale: 10.0
-        x_scale: 10.0
-        height_scale: 5.0
-        width_scale: 5.0
-      }
-    }
-    matcher {
-      argmax_matcher {
-        matched_threshold: 0.5
-        unmatched_threshold: 0.5
-        ignore_thresholds: false
-        force_match_for_each_row: true
-      }
-    }
-    similarity_calculator {
-      iou_similarity {
-      }
-    }
-    anchor_generator {
-      ssd_anchor_generator {
-        num_layers: 6
-        min_scale: 0.2
-        max_scale: 0.95
-        aspect_ratios: [1.0, 2.0, 0.5]
-        reduce_boxes_in_lowest_layer: true
-      }
-    }
-    box_predictor {
-      convolutional_box_predictor {
-        min_depth: 0
-        max_depth: 0
-        num_layers_before_predictor: 0
-        use_dropout: false
-        dropout_keep_probability: 0.8
-        kernel_size: 1
-        box_code_size: 4
-        use_depthwise: true
-      }
-    }
-    post_processing {
-      batch_non_max_suppression {
-        score_threshold: 1e-8
-        iou_threshold: 0.6
-        max_detections_per_class: 100
-        max_total_detections: 100
-      }
-      score_converter: SIGMOID
-    }
-    normalize_loss_by_num_matches: true
-    loss {
-      classification_loss {
-        weighted_sigmoid_focal {
-          gamma: 2.0
-          alpha: 0.75
-        }
-      }
-      localization_loss {
-        weighted_smooth_l1 {
-        }
-      }
-      classification_weight: 1.0
-      localization_weight: 1.0
-    }
-  }
-}
+import tensorflow as tf
 
-train_config {
-  batch_size: 16
-  num_steps: 20000
-  fine_tune_checkpoint: "ssd_mobilenet_v1_coco_2018_01_28/model.ckpt"
-  fine_tune_checkpoint_type: "detection"
-  optimizer {
-    rms_prop_optimizer {
-      learning_rate {
-        exponential_decay_learning_rate {
-          initial_learning_rate: 0.004
-          decay_steps: 800720
-          decay_factor: 0.95
-        }
-      }
-      momentum_optimizer_value: 0.9
-      decay: 0.9
-      epsilon: 1.0
-    }
-  }
-  data_augmentation_options {
-    random_horizontal_flip {}
-  }
-}
+# Paths
+frozen_graph_path = "model.pb"
+saved_model_dir = "face_ssd_saved_model"
 
-train_input_reader {
-  label_map_path: "label_map.pbtxt"
-  tf_record_input_reader {
-    input_path: "train.record"
-  }
-}
+# Load frozen graph
+with tf.io.gfile.GFile(frozen_graph_path, "rb") as f:
+    graph_def = tf.compat.v1.GraphDef()
+    graph_def.ParseFromString(f.read())
 
-eval_config {
-  num_examples: 200
-  max_evals: 10
-  use_moving_averages: false
-}
+# Import graph into default graph
+with tf.Graph().as_default() as graph:
+    tf.import_graph_def(graph_def, name="")
 
-eval_input_reader {
-  label_map_path: "label_map.pbtxt"
-  shuffle: false
-  num_readers: 1
-  tf_record_input_reader {
-    input_path: "train.record"
-  }
-}
+# Print inputs and outputs to double-check
+for op in graph.get_operations():
+    print(op.name)
+
+# Now save as SavedModel
+with tf.compat.v1.Session(graph=graph) as sess:
+    tf.compat.v1.saved_model.simple_save(
+        sess,
+        saved_model_dir,
+        inputs={"image_tensor": graph.get_tensor_by_name("image_tensor:0")},
+        outputs={
+            "detection_boxes": graph.get_tensor_by_name("detection_boxes:0"),
+            "detection_scores": graph.get_tensor_by_name("detection_scores:0"),
+            "detection_classes": graph.get_tensor_by_name("detection_classes:0"),
+            "num_detections": graph.get_tensor_by_name("num_detections:0"),
+        },
+    )
+
+print("✅ SavedModel created at:", saved_model_dir)
