@@ -1,34 +1,27 @@
 import tensorflow as tf
+import numpy as np
 
-# Paths
-frozen_graph_path = "model.pb"
-saved_model_dir = "face_ssd_saved_model"
+# Representative dataset for calibration
+def representative_dataset():
+    for _ in range(100):
+        dummy = np.random.randint(-128, 127, size=(1, 300, 300, 3), dtype=np.int8)
+        yield [dummy]
 
-# Load frozen graph
-with tf.io.gfile.GFile(frozen_graph_path, "rb") as f:
-    graph_def = tf.compat.v1.GraphDef()
-    graph_def.ParseFromString(f.read())
+# Create TFLite converter
+converter = tf.lite.TFLiteConverter.from_saved_model("face_ssd_saved_model")
+converter.optimizations = [tf.lite.Optimize.DEFAULT]
+converter.representative_dataset = representative_dataset
 
-# Import graph into default graph
-with tf.Graph().as_default() as graph:
-    tf.import_graph_def(graph_def, name="")
+# Force FULL INT8 — input/output/int ops
+converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+converter.inference_input_type = tf.int8
+converter.inference_output_type = tf.int8
 
-# Print inputs and outputs to double-check
-for op in graph.get_operations():
-    print(op.name)
+# Convert model
+tflite_model = converter.convert()
 
-# Now save as SavedModel
-with tf.compat.v1.Session(graph=graph) as sess:
-    tf.compat.v1.saved_model.simple_save(
-        sess,
-        saved_model_dir,
-        inputs={"image_tensor": graph.get_tensor_by_name("image_tensor:0")},
-        outputs={
-            "detection_boxes": graph.get_tensor_by_name("detection_boxes:0"),
-            "detection_scores": graph.get_tensor_by_name("detection_scores:0"),
-            "detection_classes": graph.get_tensor_by_name("detection_classes:0"),
-            "num_detections": graph.get_tensor_by_name("num_detections:0"),
-        },
-    )
+# Save TFLite model
+with open("face_ssd_mobilenetv1_full_int8.tflite", "wb") as f:
+    f.write(tflite_model)
 
-print("✅ SavedModel created at:", saved_model_dir)
+print("FULL INT8 TFLite model generated: face_ssd_mobilenetv1_full_int8.tflite")
