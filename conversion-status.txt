@@ -5,3 +5,25 @@ python3 models-master/research/object_detection/model_main_tf2.py \
 
 
 export PYTHONPATH=$PYTHONPATH:$(pwd)/models-master:$(pwd)/models-master/research:$(pwd)/models-master/research/slim
+
+
+
+
+
+
+vit
+
+First, we downloaded and unzipped the pytorch-image-models GitHub repository.
+Since Hugging Face was blocked and pretrained weights were not available, we decided to use the torchvision implementation of the Vision Transformer model vit_b_16 which does not depend on external downloads.
+
+We installed the necessary dependencies: torch, torchvision, onnx, and onnxruntime.
+
+We wrote a Python script that performs the following steps:
+	1.	Load the vit_b_16 model architecture from torchvision with weights set to None so that no download was required.
+	2.	Set the model to evaluation mode.
+	3.	Created a dummy input tensor of shape 1, 3, 224, 224 to match the expected input shape of the ViT model.
+	4.	Ran a forward pass on the model with the dummy input to verify that the model is working and to check output shape.
+	5.	Exported the FP32 model to ONNX format using torch.onnx.export with opset version 14. This produced the file vit_fp32.onnx.
+	6.	Applied dynamic quantization on the ONNX model using onnxruntime.quantization.quantize_dynamic with weight type set to QInt8. This produced the file vit_int8.onnx.
+
+At the end of this process, we had both the float32 ONNX model and the quantized int8 ONNX model ready for benchmarking and NPU inference.
