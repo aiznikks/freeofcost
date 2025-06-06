@@ -27,3 +27,32 @@ We wrote a Python script that performs the following steps:
 	6.	Applied dynamic quantization on the ONNX model using onnxruntime.quantization.quantize_dynamic with weight type set to QInt8. This produced the file vit_int8.onnx.
 
 At the end of this process, we had both the float32 ONNX model and the quantized int8 ONNX model ready for benchmarking and NPU inference.
+
+
+
+
+
+
+keras---
+
+Here is the plain step-by-step summary of how we converted the keras_centernet model to int8 onnx using static post training quantization.
+
+Step 1
+We downloaded and extracted the keras-centernet GitHub repository zip
+
+Step 2
+We modified the export script to load the base Keras model using HourglassNetwork with pre-trained weights and saved the model as centernet_saved_model in TensorFlow SavedModel format
+
+Step 3
+We used the tf2onnx tool to convert the centernet_saved_model directory into centernet_fp32.onnx in ONNX format using the –large_model flag to handle the large size of the model
+
+Step 4
+Since the ONNX model was zipped due to large_model, we renamed it to .zip and extracted it to centernet_fp32_unzipped directory containing model.onnx
+
+Step 5
+To perform static post-training quantization, we created a quantize_static_centernet.py script which used onnxruntime quantization.quantize_static API. We provided a CalibrationDataReader that supplied representative dummy data. This quantized both weights and activations to INT8
+
+Step 6
+We ran the quantization script and obtained centernet_int8_static.onnx which is now the final static quantized int8 ONNX model ready to be tested on the SR NPU SDK and Rose-M board
+
+This is the complete process we followed to convert the model.
