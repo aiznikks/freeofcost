@@ -10,3 +10,7 @@ graph_def = frozen_func.graph.as_graph_def()
 # Save frozen graph
 with tf.io.gfile.GFile("frozen_model.pb", "wb") as f:
     f.write(graph_def.SerializeToString())
+    
+    
+    
+saved_model_cli show --dir /path/to/saved_model_folder --all
