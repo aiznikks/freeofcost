@@ -1,36 +1,19 @@
-#to freeze model
 import tensorflow as tf
-from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
-loaded = tf.saved_model.load("your_saved_model_dir")
-concrete_func = loaded.signatures['serving_default']
+# Load MobileNetV2 SavedModel
+model = tf.saved_model.load("mobilenet_v2_saved_model")  # change path as needed
+concrete_func = model.signatures["serving_default"]
 
-frozen_func = convert_variables_to_constants_v2(concrete_func)
-graph_def = frozen_func.graph.as_graph_def()
+# Set static input shape
+concrete_func.inputs[0].set_shape([1, 224, 224, 3])  # Static input for MobileNetV2
 
-# Save frozen graph
-with tf.io.gfile.GFile("frozen_model.pb", "wb") as f:
-    f.write(graph_def.SerializeToString())
-    
-    
-    
-#to check input output or saved model
-saved_model_cli show --dir /path/to/saved_model_folder --all
+# Convert to FP32 .tflite
+converter = tf.lite.TFLiteConverter.from_concrete_functions([concrete_func])
+converter.optimizations = []  # Keep it FP32
+converter.target_spec.supported_types = [tf.float32]
 
+tflite_model = converter.convert()
 
-
-#
-[one-import-tf]
-input_path=/path/to/saved_model_folder
-output_path=resnet_v2_50.circle
-input_arrays=serving_default_inputs
-output_arrays=StatefulPartitionedCall
-input_shapes=serving_default_inputs[1,224,224,3]
-
-[one-optimize]
-input_path=resnet_v2_50.circle
-output_path=resnet_v2_50_optimized.circle
-
-[one-codegen]
-input_path=resnet_v2_50_optimized.circle
-output_path=resnet_v2_50.tvn
+# Save the model
+with open("mobilenet_v2_fp32_static.tflite", "wb") as f:
+    f.write(tflite_model)
