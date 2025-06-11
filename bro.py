@@ -1,19 +1,21 @@
 import tensorflow as tf
 
-# Load MobileNetV2 SavedModel
-model = tf.saved_model.load("mobilenet_v2_saved_model")  # change path as needed
-concrete_func = model.signatures["serving_default"]
+# Your frozen .pb path
+frozen_graph_path = "resnet_v1_50.pb"
 
-# Set static input shape
-concrete_func.inputs[0].set_shape([1, 224, 224, 3])  # Static input for MobileNetV2
+# Known tensor details — adjust if needed
+input_arrays = ["InputImage"]               # From Netron
+output_arrays = ["resnet_v1_50/predictions/Softmax"]  # Try to find this from Netron
+input_shapes = {"InputImage": [1, 224, 224, 3]}        # Static shape
 
-# Convert to FP32 .tflite
-converter = tf.lite.TFLiteConverter.from_concrete_functions([concrete_func])
-converter.optimizations = []  # Keep it FP32
-converter.target_spec.supported_types = [tf.float32]
+converter = tf.compat.v1.lite.TFLiteConverter.from_frozen_graph(
+    frozen_graph_path,
+    input_arrays=input_arrays,
+    output_arrays=output_arrays,
+    input_shapes=input_shapes
+)
 
 tflite_model = converter.convert()
 
-# Save the model
-with open("mobilenet_v2_fp32_static.tflite", "wb") as f:
+with open("resnet_v1_50_fp32_static.tflite", "wb") as f:
     f.write(tflite_model)
