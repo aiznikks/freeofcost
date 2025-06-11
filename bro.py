@@ -1,23 +1,25 @@
 import tensorflow as tf
 
-# Load the SavedModel
-model_dir = "saved_model_dir"  # Replace with actual path if different
-model = tf.saved_model.load(model_dir)
+# Use static FP32 model as base
+fp32_model_path = "inception_v3_fp32_static.tflite"
 
-# Get concrete function
-concrete_func = model.signatures["serving_default"]
+# Load the model
+converter = tf.lite.TFLiteConverter.from_saved_model("saved_model_dir")  # safer to re-load from original
+converter.optimizations = [tf.lite.Optimize.DEFAULT]
 
-# Set input shape to static
-concrete_func.inputs[0].set_shape([1, 299, 299, 3])  # InceptionV3 expects 299x299 input
+# Set INT8 as target
+converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+converter.inference_input_type = tf.uint8
+converter.inference_output_type = tf.uint8
 
-# Create TFLiteConverter from the fixed-shape function
-converter = tf.lite.TFLiteConverter.from_concrete_functions([concrete_func])
-converter.target_spec.supported_types = [tf.float32]
-converter.optimizations = []  # No quantization, keep FP32
-converter.inference_input_type = tf.float32
-converter.inference_output_type = tf.float32
+# Set fixed shape: [1, 299, 299, 3]
+def representative_dataset():
+    for _ in range(100):
+        yield [tf.random.uniform([1, 299, 299, 3], 0, 255, dtype=tf.float32)]
+
+converter.representative_dataset = representative_dataset
 
 # Convert and save
-tflite_model = converter.convert()
-with open("inception_v3_fp32_static.tflite", "wb") as f:
-    f.write(tflite_model)
+int8_model = converter.convert()
+with open("inception_v3_int8_static.tflite", "wb") as f:
+    f.write(int8_model)
