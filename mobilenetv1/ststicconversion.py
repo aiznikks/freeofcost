@@ -27,3 +27,14 @@ tflite_model = converter.convert()
 # Save the final model
 with open("mobilenet_v1_int8_static.tflite", "wb") as f:
     f.write(tflite_model)
+    
+    
+    
+#
+import tensorflow as tf
+
+interpreter = tf.lite.Interpreter(model_path="mobilenet_v1_int8.tflite")
+interpreter.allocate_tensors()
+input_details = interpreter.get_input_details()
+print(input_details[0]['dtype'], input_details[0]['quantization'])
+
