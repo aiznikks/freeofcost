@@ -1,11 +1,18 @@
-import onnx
+import tensorflow as tf
+import tf2onnx
 
-model = onnx.load("vit_fp32.onnx")
+# Load dynamic VIT model
+model = tf.keras.models.load_model("vit.h5")
 
-# Fix output batch size
-for output in model.graph.output:
-    output.type.tensor_type.shape.dim[0].dim_value = 1  # Set batch=1
+# Define static input signature
+spec = (tf.TensorSpec((1, 384, 384, 3), tf.float32, name="input"),)
 
-# Save fixed model
-onnx.save(model, "vit_fp32_static.onnx")
-print("Output shape fixed to [1, 1000]")
+# Convert to ONNX with static input shape
+model_proto, _ = tf2onnx.convert.from_keras(
+    model,
+    input_signature=spec,
+    opset=13,
+    output_path="vit_fp32.onnx"
+)
+
+print("Saved static ONNX: vit_fp32.onnx")
