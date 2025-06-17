@@ -1,0 +1,5 @@
+tackled several model-level and system-level issues that directly impacted our NPU benchmarking pipeline. When quantized models like SSD, YOLO, and DeepLabV3+ failed during runtime or showed inaccurate results, I led structured root cause analysis — isolating issues through manual inspection of tensor mismatches, Netron-level visualizations, and iterative validation via profiling tools.
+
+In one key case, I developed a reusable script to standardize input/output shapes during ONNX and TFLite conversions, which reduced model rejection cases by over 60%. I also documented internal best practices to prevent repeat failures in future profiling cycles.
+
+Rather than escalating every issue, I made it a practice to first experiment with solutions, verify behavior across model types, and only then involve SDK or hardware teams — saving time across the board. This proactive, data-driven approach allowed me to resolve blockers independently, while also creating reusable solutions that benefited the team long-term.
