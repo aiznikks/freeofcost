@@ -1,0 +1,5 @@
+consistently collaborated across teams to drive shared progress on model conversion, quantization, and profiling tasks. Recognizing that many challenges—especially with dynamic inputs, failed conversions, or SDK mismatches—were common across multiple models, I made it a point to surface insights early and share concrete solutions proactively.
+
+I supported teammates by validating their failing models, clarifying usage of internal tools like onecc, and creating reference scripts to streamline conversion pipelines. These contributions were not limited to my immediate scope but aimed at reducing friction across the board, especially when deadlines were tight or parallel efforts risked duplication.
+
+By maintaining clear communication, being responsive to blockers raised by others, and stepping in where needed, I contributed to a more aligned and efficient team environment. The cumulative impact of these efforts was faster model turnaround, improved shared tooling, and a stronger sense of technical cohesion across the group.
