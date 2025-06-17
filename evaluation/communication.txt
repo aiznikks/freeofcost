@@ -1,0 +1,5 @@
+focused not only on clearly conveying technical information but also on listening actively to ensure alignment and mutual understanding during collaborative tasks. While working on model conversion, quantization, and profiling, I made sure to fully understand the context or blockers shared by others before responding — especially when debugging shared issues or reviewing model behavior across frameworks.
+
+I structured my messages to be technically accurate, concise, and tailored to the audience — whether I was reporting profiling results, walking someone through a conversion step, or discussing limitations with SDK teams. I also made a conscious effort to ask clarifying questions, rephrase issues to confirm understanding, and avoid assumptions — which often helped uncover root causes faster.
+
+This balanced approach — combining clear communication with active listening — improved collaboration, reduced back-and-forth, and helped maintain smooth workflows even during time-sensitive tasks.
