@@ -1,5 +1,6 @@
-I approached this year with a strong commitment to learning beyond my immediate responsibilities. While actively working on model conversion and profiling workflows, I consistently explored new frameworks, tools, and SDK updates to stay ahead of changes — including adapting to dynamic/static model formats, new post-training quantization methods, and advanced debugging with Netron and onecc.
-
-Beyond the hands-on work, I invested time in studying internal documentation, reading open-source implementations, and reverse-engineering unfamiliar model types to understand how different architectures behave across hardware backends. These learnings directly translated into better conversion strategies, reduced profiling failures, and faster delivery.
-
-I also shared knowledge with teammates through documentation, reusable scripts, and on-call walkthroughs, reinforcing a culture of technical growth within the team. This habit of continuous learning didn’t just help me solve problems — it expanded my capacity to take on more complex, cross-domain tasks confidently.
+	•	Took initiative to deepen understanding of model conversion techniques, post-training quantization, and profiling using tools like onecc and Netron.
+	•	Regularly explored new frameworks and formats (e.g., ONNX, TFLite, SavedModel) to stay ahead of platform changes and model deployment requirements.
+	•	Learned through hands-on experiments, studying open-source repositories, analyzing real failures, and revisiting internal documentation when tackling new model types.
+	•	Applied learnings immediately — leading to more efficient conversions, quicker issue resolution, and broader model support.
+	•	Shared discoveries with peers via reusable scripts and informal walkthroughs, contributing to the team’s overall knowledge pool.
+	•	Developed a habit of learning while delivering, which helped me take ownership of more complex and less-documented tasks over time.
