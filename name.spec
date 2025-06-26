@@ -6,15 +6,16 @@ Summary: NPU Task Manager
 License: Proprietary
 
 # ===================== Build Type Control =====================
-# Use '--define "buildtype test"' to build only test RPMs
-# Use '--define "buildtype server"' to build only server RPMs
-# Default (no buildtype): builds all RPMs
+# Use '--define "buildtype test"'    => build only test RPMs
+# Use '--define "buildtype server"'  => build only server RPMs
+# No buildtype defined               => builds everything
 %{!?buildtype: %define buildtype all}
 
-# Define macros for conditional RPM inclusion
+# Define macros to simplify conditionals below
 %define build_test   %{!?buildtype:1}%{?buildtype:test}
 %define build_server %{!?buildtype:1}%{?buildtype:server}
 # ==============================================================
+
 Source: %{name}-%{version}.tar.gz
 Source 1001: %{name}.manifest
 %define CHIP_NAME %{_vd_cfg_chip}
