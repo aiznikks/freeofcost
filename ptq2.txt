@@ -1,0 +1,5 @@
+sudo mkdir -p /usr/local/lib/_hide_pb /usr/local/include/_hide_pb /usr/local/lib/cmake/_hide_pb
+sudo sh -c 'mv /usr/local/lib/libproto* /usr/local/lib/_hide_pb/ 2>/dev/null || true'
+sudo sh -c 'mv /usr/local/include/google/protobuf /usr/local/include/_hide_pb/ 2>/dev/null || true'
+sudo sh -c 'mv /usr/local/lib/cmake/protobuf /usr/local/lib/cmake/_hide_pb/ 2>/dev/null || true'
+sudo ldconfig
