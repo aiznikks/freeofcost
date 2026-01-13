@@ -1,0 +1,34 @@
+Context:
+We are generating custom weight (.npy) files for the Samsung kants2ue board.  
+The model graph builds successfully on the board, but crashes at runtime with a tensor dimension mismatch error (SIGABRT).
+
+Observed Issue:
+- Weights load without file-level errors.
+- Runtime fails during execution with "tensor dimensions mismatch".
+- This indicates a mismatch between expected tensor layout/shape on the kants2ue runtime and the generated weights, not file corruption.
+
+What needs to be done:
+1. Verify the **exact weight tensor layout expected by the kants2ue runtime**:
+   - Conv weights order: confirm whether runtime expects  
+     (out, height, width, in) instead of (out, in, height, width).
+   - Fully connected (dense) weights: confirm whether runtime expects  
+     (out_features, in_features) or transpose of standard NumPy format.
+
+2. Confirm the **flattened tensor size before the dense layers**:
+   - The flatten output size from conv + pool layers must exactly match
+     the input dimension of dense0 / dense0_extra.
+   - Any mismatch here causes runtime SIGABRT.
+
+3. Confirm **NPY compatibility requirements**:
+   - Supported .npy version (e.g., v1.0 only).
+   - Endianness and float32 requirement.
+   - Whether runtime uses a custom NPY loader with strict assumptions.
+
+Expected Outcome:
+- Final confirmation of:
+  - Correct conv weight transpose order.
+  - Correct dense weight transpose.
+  - Exact expected input size for dense layers.
+- Once these contracts are aligned, the runtime tensor mismatch should be resolved.
+
+This is a runtime contract mismatch issue, not a Python-side generation failure.
