@@ -1,0 +1,54 @@
+You are analyzing a multi-target codebase written in C/C++ and Python that supports **multiple hardware boards**, including but not limited to the Samsung kants2ue board.
+
+Goal:
+Help me understand the shared architecture and board-specific differences so I can correctly generate and load neural network weight files across different boards without runtime tensor mismatch errors.
+
+Please do the following step by step:
+
+1. **Overall architecture (multi-board view)**
+   - Explain the common pipeline shared across all boards.
+   - Identify which parts of the code are board-agnostic and which are board-specific.
+   - Show how a specific board (e.g., kants2ue) plugs into this system.
+
+2. **Python → Runtime boundary**
+   - Explain how Python-generated weight files are intended to be consumed by different boards.
+   - Clarify whether weights are:
+     - universal across boards, or
+     - transformed per board (layout, transpose, packing).
+   - Identify the configuration or selector that determines board-specific behavior.
+
+3. **Board-specific weight loading**
+   - For each supported board:
+     - Point out the C/C++ loader implementation used.
+     - Highlight differences in `.npy` parsing, tensor layout, and dtype expectations.
+   - Explicitly explain what makes kants2ue different from other boards.
+
+4. **Tensor contracts per board**
+   - For Conv, Pool, Flatten, Dense layers:
+     - Describe expected tensor shapes and dimension order.
+     - Call out any per-board transposes or reshapes.
+   - Clearly identify where tensor contracts diverge across boards.
+
+5. **Flatten → Dense alignment**
+   - Explain how flatten size is computed on each board.
+   - Show how mismatches propagate to runtime crashes (SIGABRT).
+
+6. **Error localization**
+   - Given a runtime error like “tensor dimensions mismatch”:
+     - Explain how to determine which board-specific contract is violated.
+     - Identify the most likely tensor causing the failure.
+
+7. **Practical guidance**
+   - Summarize what transformations must be applied in Python
+     depending on the target board.
+   - Indicate where new boards should define their own tensor contract.
+
+Constraints:
+- Do not assume a single-board runtime.
+- Tie every explanation to actual files, structs, or functions.
+- Avoid generic ML explanations; focus on this codebase.
+
+Output format:
+- Structured sections.
+- Simple, direct language.
+- Assume the reader is new to the codebase but technically capable.
