@@ -1,0 +1,102 @@
+You are analyzing a complex multi-board C/C++ + Python codebase where a runtime error
+`Tensor dimensions mismatch` occurs inside `fill_tensor` (Utils.h).
+
+Your task is NOT to fix the bug directly.
+
+Your task is to **collect and consolidate all critical information required to debug this issue into ONE SINGLE MARKDOWN FILE**.
+
+Create a file named:
+
+DEBUG_TENSOR_MISMATCH_DUMP.md
+
+and populate it with the following sections, in this exact order.
+
+---
+
+## 1. Board Selection Logic
+- Identify where the target board is selected (STANDARD / KANTSU2E / others).
+- Mention file names, functions, and conditions used.
+- Explain how this selection affects tensor creation or weight loading.
+
+---
+
+## 2. Tensor Creation Summary (Runtime View)
+For each layer in execution order:
+- conv1
+- conv2
+- conv3
+- flatten
+- dense0_extra
+- dense0
+
+For EACH layer, document:
+- File name
+- Function name
+- Tensor shape as created at runtime
+- Total number of elements allocated
+
+---
+
+## 3. Flatten Logic (Critical)
+- Locate the exact code responsible for flattening.
+- Explain how flatten dimensions are computed.
+- State the expected flattened size.
+- Mention whether this logic is board-specific or shared across boards.
+
+---
+
+## 4. Weight Loading Path
+- Identify the exact function(s) that load `.npy` files.
+- Explain how the NPY header is parsed.
+- Explain how the number of elements to read is calculated.
+- Explicitly state what condition triggers the `fill_tensor` error.
+
+---
+
+## 5. fill_tensor Function (Full Detail)
+- Paste the full implementation of `fill_tensor`.
+- Highlight the exact check that throws `Tensor dimensions mismatch`.
+- Explain what the function expects vs what it receives.
+
+---
+
+## 6. Weight Files Inventory (Python Side)
+For each weight and bias file:
+- File name
+- Shape
+- Total element count
+- Data type
+
+Include:
+- conv weights
+- conv biases
+- dense0 weights
+- dense0_extra weights
+- dense biases
+
+---
+
+## 7. Mismatch Hypothesis
+Based strictly on the above data:
+- Identify which tensor is most likely mismatched.
+- Explain WHY the mismatch occurs.
+- State whether the issue is:
+  - wrong flatten size
+  - wrong tensor allocation
+  - wrong file read count
+  - board-specific logic mismatch
+
+---
+
+## Constraints
+- Do NOT assume missing files.
+- Do NOT skip code references.
+- Do NOT fix anything yet.
+- Everything must be traceable to a file and line number.
+- All output must go into **DEBUG_TENSOR_MISMATCH_DUMP.md only**.
+
+---
+
+Goal:
+After this file is generated, a human should be able to diagnose the bug
+without searching the codebase again.
